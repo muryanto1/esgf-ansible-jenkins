@@ -40,5 +40,5 @@ with open(modified_vars_file, 'a') as f:
     f.write("globus_user: {s}\n".format(s=globus_user))
     f.write("globus_passwd: {s}\n".format(s=globus_passwd))
 
-#copyfile(modified_vars_file, vars_file)
+copyfile(modified_vars_file, vars_file)
 sys.exit(0)

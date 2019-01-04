@@ -2,9 +2,11 @@ def error = null
 currentBuild.result = "SUCCESS"
 ssh_pass = "sshPass"
 admin_pass = "adminPass"
+globus_user = "globus_user"
+globus_pass = "globus_pass"
 
 esgf_ansible_url = "https://github.com/ESGF/esgf-ansible.git"
-esgf_ansible_branch = "centos7"
+esgf_ansible_branch = "ncarlson"
 
 // make following to be parameters
 data_node = "esgf-dev2.llnl.gov"
@@ -16,9 +18,9 @@ vm_node = "esgf-dev2"
 // TEMPORARY
 conda_path = "/var/lib/jenkins/work/miniconda3/bin"
 python = "${conda_path}/python"
-workdir = "/var/lib/jenkins/work/repos/ansible-jenkins"
-create_hosts_script = "${workdir}/scripts/createHostsFile.py"
-gen_expect_script = "${workdir}/scripts/genRunAnsibleExpectScript.py"
+workdir = "/var/lib/jenkins/work/repos/esgf-ansible-jenkins"
+create_hosts_script = "${workdir}/scripts/create_hosts_file.py"
+gen_vars_file_script = "${workdir}/scripts/gen_vars_file.py"
 template_expect = "${workdir}/scripts/runAnsiblePlaybook.template.exp"
 expect_script = "${workdir}/scripts/runAnsiblePlaybook.exp"
 prepare_vm = "${workdir}/scripts/prepare_vm.py"
@@ -53,10 +55,18 @@ try {
                             string(defaultValue: 'None',
                                 description: 'Admin password',
                                 name: 'adminPass'),
+                            string(defaultValue: 'None',
+                                description: 'globus user',
+                                name: 'globus_user'),
+                            string(defaultValue: 'None',
+                                description: 'globus password',
+                                name: 'globus_pass'),
                         ])
             // Save to variables. Default to empty string if not found.
             ssh_pass = userInput.sshPass?:''
             admin_pass = userInput.adminPass?:''
+            globus_user = userInput.globus_user?:''
+            globus_pass = userInput.globus_pass?:''
 
             // Echo to console
             echo("SSH Password: ${ssh_pass}")
