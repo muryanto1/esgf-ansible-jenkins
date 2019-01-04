@@ -1,0 +1,84 @@
+def error = null
+currentBuild.result = "SUCCESS"
+ssh_pass = "sshPass"
+admin_pass = "adminPass"
+
+esgf_ansible_url = "https://github.com/ESGF/esgf-ansible.git"
+esgf_ansible_branch = "centos7"
+
+// make following to be parameters
+data_node = "esgf-dev2.llnl.gov"
+index_idp_node = "esgf-dev2.llnl.gov"
+vm_host = "grim.llnl.gov"
+vmx_file = "/var/lib/jenkins/vmware/esgf-dev2/esgf-dev2.vmx"
+vm_snapshot = "SnapshotForJenkins2"
+vm_node = "esgf-dev2"
+// TEMPORARY
+conda_path = "/var/lib/jenkins/work/miniconda3/bin"
+python = "${conda_path}/python"
+workdir = "/var/lib/jenkins/work/repos/ansible-jenkins"
+create_hosts_script = "${workdir}/scripts/createHostsFile.py"
+gen_expect_script = "${workdir}/scripts/genRunAnsibleExpectScript.py"
+template_expect = "${workdir}/scripts/runAnsiblePlaybook.template.exp"
+expect_script = "${workdir}/scripts/runAnsiblePlaybook.exp"
+prepare_vm = "${workdir}/scripts/prepare_vm.py"
+
+try {
+    stage('checkout') {
+        node('master') {
+	    withEnv(["ws=${pwd()}"]) {
+                echo "...git_clone_esgf_ansible..."
+                git branch: "$esgf_ansible_branch", credentialsId: 'muryanto1', url: "${esgf_ansible_url}"
+	    }
+        }
+    }
+    stage('prepare_vm') {
+        node('master') {
+            withEnv(["ws=${pwd()}"]) {
+                echo "...prepare_vm..."
+                //sh "${python} ${prepare_vm} -H ${vm_host} -x ${vmx_file} -s ${vm_snapshot} -n ${vm_node}"
+            }
+        }
+    }
+    stage('prompt') {
+        node('master') {
+            echo "...promptUser..."
+            // Variables for input
+            def userInput = input(
+                id: 'userInput', message: 'Enter credentials:?',
+                parameters: [
+                            string(defaultValue: 'None',
+                                description: 'SSH password',
+                                name: 'sshPass'),
+                            string(defaultValue: 'None',
+                                description: 'Admin password',
+                                name: 'adminPass'),
+                        ])
+            // Save to variables. Default to empty string if not found.
+            ssh_pass = userInput.sshPass?:''
+            admin_pass = userInput.adminPass?:''
+
+            // Echo to console
+            echo("SSH Password: ${ssh_pass}")
+            echo("Admin Password: ${admin_pass}")
+        }
+    }
+    stage('run_playbook') {
+        node('master') {
+	    withEnv(["ws=${pwd()}"]) {           
+                // create hosts file
+		def sample_hosts_file = "${ws}/sample.hosts"
+		def hosts_file = "${workdir}/hosts_file"
+        	sh "${python} ${create_hosts_script} -d ${data_node} -i ${index_idp_node} -s ${sample_hosts_file} -o ${hosts_file}"
+                sh "cp ${template_expect} ${expect_script}"
+		sh "${python} ${gen_expect_script} -e ${expect_script} -H ${hosts_file} -s ${ssh_pass} -a ${admin_pass} -w ${workdir}"
+                sh "export TERM=vt100; export PATH=${conda_path}:$PATH; cd ${ws}; expect ${expect_script}"
+  	    }  
+	}
+
+    }
+} catch (caughtException) {
+    error = caughtException
+    currentBuild.result = "FAILURE"
+}
+
