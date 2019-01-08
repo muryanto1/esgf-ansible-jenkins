@@ -60,7 +60,7 @@ try {
                 // create hosts file
 		def sample_hosts_file = "${ws}/sample.hosts"
 		def set_env = "export TERM=vt100; export ANSIBLE_NOCOWS=1; export PATH=$conda_path:/sbin:/usr/sbin:$PATH"
-        	sh "${python} ${create_hosts_script} -d ${data_node} -i ${index_idp_node} -s ${sample_hosts_file} -o ${hosts_file}"
+        	sh "${python} ${ws}/${create_hosts_script} -d ${data_node} -i ${index_idp_node} -s ${sample_hosts_file} -o ${hosts_file}"
 		sh "bash -c '${set_env}; ansible-playbook -i ${hosts_file} -v --tags install -u root -c paramiko -e @${vars_file} all.yml'"
   	    }  
 	}
@@ -75,12 +75,13 @@ try {
     }
     stage('run_tests_on_vm') {
         node("${vm_node}") {
-            withEnv(["ws=${pwd()}/esgf_ansible_jenkins"]) {
+            withEnv(["ws=${pwd()}"]) {
                 echo "...run_tests_on_vm..."
-                echo "...git_clone_esgf_ansible_jenkins..."
-                git branch: "master", credentialsId: 'muryanto1', url: "${esgf_ansible_jenkins_url}"
-		sh "${vm_python_path}/python ${run_esgf_test_suite} -b ${esgf_test_suite_branch} -p ${vm_python_path} -o ${run_options} -w ${vm_jenkins_home} -c ${config_ini}"
-		//sh "${vm_python_path}/python ${run_esgf_test_suite} -b ${esgf_test_suite_branch} -p ${vm_python_path} -o ${run_options1} -w ${vm_jenkins_home} -c ${config_ini}"
+		dir("esgf_ansible_jenkins") {
+		    git branch: "master", credentialsId: 'muryanto1', url: "${esgf_ansible_jenkins_url}"
+		}
+		sh "${vm_python_path}/python ${ws}/${run_esgf_test_suite} -b ${esgf_test_suite_branch} -p ${vm_python_path} -o ${run_options} -w ${vm_jenkins_home} -c ${config_ini}"
+		//sh "${vm_python_path}/python ${ws}/${run_esgf_test_suite} -b ${esgf_test_suite_branch} -p ${vm_python_path} -o ${run_options1} -w ${vm_jenkins_home} -c ${config_ini}"
             }
         }
     }
