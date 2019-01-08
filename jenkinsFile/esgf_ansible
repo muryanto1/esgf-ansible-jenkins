@@ -1,36 +1,47 @@
 def error = null
 currentBuild.result = "SUCCESS"
-ssh_pass = "sshPass"
-admin_pass = "adminPass"
-globus_user = "globus_user"
-globus_pass = "globus_pass"
 
 esgf_ansible_url = "https://github.com/ESGF/esgf-ansible.git"
-esgf_ansible_branch = "ncarlson"
+//esgf_ansible_branch = "ncarlson"
+esgf_ansible_jenkins_url = "https://github.com/muryanto1/esgf-ansible-jenkins.git"
 
-// make following to be parameters
-data_node = "esgf-dev2.llnl.gov"
-index_idp_node = "esgf-dev2.llnl.gov"
+data_node = "${vm_node}.llnl.gov"
+index_idp_node = "${vm_node}.llnl.gov"
+
 vm_host = "grim.llnl.gov"
-vmx_file = "/var/lib/jenkins/vmware/esgf-dev2/esgf-dev2.vmx"
-vm_snapshot = "SnapshotForJenkins2"
-vm_node = "esgf-dev2"
-// TEMPORARY
+vmx_file = "/var/lib/jenkins/vmware/${vm_node}/${vm_node}.vmx"
+vm_snapshot = "SnapshotForJenkins"
+vm_jenkins_home = "/home/jenkins"
+vm_python_path = "${vm_jenkins_home}/miniconda2/bin"
+
+// on master
 conda_path = "/var/lib/jenkins/work/miniconda3/bin"
 python = "${conda_path}/python"
-workdir = "/var/lib/jenkins/work/repos/esgf-ansible-jenkins"
-create_hosts_script = "${workdir}/scripts/create_hosts_file.py"
-gen_vars_file_script = "${workdir}/scripts/gen_vars_file.py"
-template_expect = "${workdir}/scripts/runAnsiblePlaybook.template.exp"
-expect_script = "${workdir}/scripts/runAnsiblePlaybook.exp"
-prepare_vm = "${workdir}/scripts/prepare_vm.py"
+conf_dir = "/var/lib/jenkins/esgf"
+
+workdir = "/var/lib/jenkins/work/esgf-ansible-jenkins"
+vars_file = "/var/lib/jenkins/esgf/ansible/configs/${vm_node}.vars"
+hosts_file = "${workdir}/hosts_file"
+
+create_hosts_script = "esgf_ansible_jenkins/scripts/create_hosts_file.py"
+prepare_vm = "esgf_ansible_jenkins/scripts/prepare_vm.py"
+
+run_esgf_test_suite = "esgf_ansible_jenkins/scripts/run_esgf_test_suite.py"
+run_options = "!compute,!dl"
+esgf_test_suite_branch = 'master'
+config_ini = '/home/jenkins/esgf/esgf-dev2_config.ini'
 
 try {
     stage('checkout') {
         node('master') {
 	    withEnv(["ws=${pwd()}"]) {
-                echo "...git_clone_esgf_ansible..."
-                git branch: "$esgf_ansible_branch", credentialsId: 'muryanto1', url: "${esgf_ansible_url}"
+	        sh "mkdir esgf_ansible; mkdir esgf_ansible_jenkins"
+		dir("esgf_ansible") {
+                    git branch: "$esgf_ansible_branch", credentialsId: 'muryanto1', url: "${esgf_ansible_url}"
+		}
+		dir("esgf_ansible_jenkins") {
+                    git branch: "master", credentialsId: 'muryanto1', url: "${esgf_ansible_jenkins_url}"
+ 		}
 	    }
         }
     }
@@ -38,39 +49,9 @@ try {
         node('master') {
             withEnv(["ws=${pwd()}"]) {
                 echo "...prepare_vm..."
-                //sh "${python} ${prepare_vm} -H ${vm_host} -x ${vmx_file} -s ${vm_snapshot} -n ${vm_node}"
+                sh "${python} ${prepare_vm} -H ${vm_host} -x ${vmx_file} -s ${vm_snapshot} -n ${vm_node}"
+		sh "scp ${conf_dir}/esgf-test-suite/${vm_node}_config.ini ${vm_node}:${vm_jenkins_home}/esgf"
             }
-        }
-    }
-    stage('prompt') {
-        node('master') {
-            echo "...promptUser..."
-            // Variables for input
-            def userInput = input(
-                id: 'userInput', message: 'Enter credentials:?',
-                parameters: [
-                            string(defaultValue: 'None',
-                                description: 'SSH password',
-                                name: 'sshPass'),
-                            string(defaultValue: 'None',
-                                description: 'Admin password',
-                                name: 'adminPass'),
-                            string(defaultValue: 'None',
-                                description: 'globus user',
-                                name: 'globus_user'),
-                            string(defaultValue: 'None',
-                                description: 'globus password',
-                                name: 'globus_pass'),
-                        ])
-            // Save to variables. Default to empty string if not found.
-            ssh_pass = userInput.sshPass?:''
-            admin_pass = userInput.adminPass?:''
-            globus_user = userInput.globus_user?:''
-            globus_pass = userInput.globus_pass?:''
-
-            // Echo to console
-            echo("SSH Password: ${ssh_pass}")
-            echo("Admin Password: ${admin_pass}")
         }
     }
     stage('run_playbook') {
@@ -78,15 +59,32 @@ try {
 	    withEnv(["ws=${pwd()}"]) {           
                 // create hosts file
 		def sample_hosts_file = "${ws}/sample.hosts"
-		def hosts_file = "${workdir}/hosts_file"
+		def set_env = "export TERM=vt100; export ANSIBLE_NOCOWS=1; export PATH=$conda_path:/sbin:/usr/sbin:$PATH"
         	sh "${python} ${create_hosts_script} -d ${data_node} -i ${index_idp_node} -s ${sample_hosts_file} -o ${hosts_file}"
-                sh "cp ${template_expect} ${expect_script}"
-		sh "${python} ${gen_expect_script} -e ${expect_script} -H ${hosts_file} -s ${ssh_pass} -a ${admin_pass} -w ${workdir}"
-                sh "export TERM=vt100; export PATH=${conda_path}:$PATH; cd ${ws}; expect ${expect_script}"
+		sh "bash -c '${set_env}; ansible-playbook -i ${hosts_file} -v --tags install -u root -c paramiko -e @${vars_file} all.yml'"
   	    }  
 	}
-
     }
+    stage('start_services') {
+        node('master') {
+	    withEnv(["ws=${pwd()}"]) {
+		def set_env = "export TERM=vt100; export ANSIBLE_NOCOWS=1; export PATH=$conda_path:/sbin:/usr/sbin:$PATH"
+		sh "bash -c '${set_env}; ansible-playbook -i ${hosts_file} -v --skip-tags install --tags start -u root -c paramiko -e @${vars_file} all.yml'"
+	    }
+        }
+    }
+    stage('run_tests_on_vm') {
+        node("${vm_node}") {
+            withEnv(["ws=${pwd()}/esgf_ansible_jenkins"]) {
+                echo "...run_tests_on_vm..."
+                echo "...git_clone_esgf_ansible_jenkins..."
+                git branch: "master", credentialsId: 'muryanto1', url: "${esgf_ansible_jenkins_url}"
+		sh "${vm_python_path}/python ${run_esgf_test_suite} -b ${esgf_test_suite_branch} -p ${vm_python_path} -o ${run_options} -w ${vm_jenkins_home} -c ${config_ini}"
+		//sh "${vm_python_path}/python ${run_esgf_test_suite} -b ${esgf_test_suite_branch} -p ${vm_python_path} -o ${run_options1} -w ${vm_jenkins_home} -c ${config_ini}"
+            }
+        }
+    }
+
 } catch (caughtException) {
     error = caughtException
     currentBuild.result = "FAILURE"
