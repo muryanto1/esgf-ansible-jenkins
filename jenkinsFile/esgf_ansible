@@ -35,7 +35,6 @@ try {
     stage('checkout') {
         node('master') {
 	    withEnv(["ws=${pwd()}"]) {
-	        sh "mkdir esgf_ansible; mkdir esgf_ansible_jenkins"
 		dir("esgf_ansible") {
                     git branch: "$esgf_ansible_branch", credentialsId: 'muryanto1', url: "${esgf_ansible_url}"
 		}
@@ -56,18 +55,18 @@ try {
     }
     stage('run_playbook') {
         node('master') {
-	    withEnv(["ws=${pwd()}"]) {           
-                // create hosts file
-		def sample_hosts_file = "${ws}/sample.hosts"
-		def set_env = "export TERM=vt100; export ANSIBLE_NOCOWS=1; export PATH=$conda_path:/sbin:/usr/sbin:$PATH"
-        	sh "${python} ${ws}/${create_hosts_script} -d ${data_node} -i ${index_idp_node} -s ${sample_hosts_file} -o ${hosts_file}"
-		sh "bash -c '${set_env}; ansible-playbook -i ${hosts_file} -v --tags install -u root -c paramiko -e @${vars_file} all.yml'"
-  	    }  
+	    withEnv(["ws=${pwd()}"]) {
+	        // create hosts file
+	        def sample_hosts_file = "${ws}/esgf_ansible/sample.hosts"
+	        def set_env = "export TERM=vt100; export ANSIBLE_NOCOWS=1; export PATH=$conda_path:/sbin:/usr/sbin:$PATH"
+                sh "${python} ${ws}/${create_hosts_script} -d ${data_node} -i ${index_idp_node} -s ${sample_hosts_file} -o ${hosts_file}"
+	        sh "bash -c '${set_env}; ansible-playbook -i ${hosts_file} -v --tags install -u root -c paramiko -e @${vars_file} ${ws}/esgf_ansible/all.yml'"  
+            }
 	}
     }
     stage('start_services') {
         node('master') {
-	    withEnv(["ws=${pwd()}"]) {
+	    withEnv(["ws=${pwd()}/esgf_ansible"]) {
 		def set_env = "export TERM=vt100; export ANSIBLE_NOCOWS=1; export PATH=$conda_path:/sbin:/usr/sbin:$PATH"
 		sh "bash -c '${set_env}; ansible-playbook -i ${hosts_file} -v --skip-tags install --tags start -u root -c paramiko -e @${vars_file} all.yml'"
 	    }
@@ -77,6 +76,7 @@ try {
         node("${vm_node}") {
             withEnv(["ws=${pwd()}"]) {
                 echo "...run_tests_on_vm..."
+                sh "mkdir esgf_ansible_jenkins"
 		dir("esgf_ansible_jenkins") {
 		    git branch: "master", credentialsId: 'muryanto1', url: "${esgf_ansible_jenkins_url}"
 		}
