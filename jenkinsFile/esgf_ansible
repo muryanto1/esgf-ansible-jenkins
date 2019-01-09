@@ -67,9 +67,9 @@ try {
     }
     stage('start_services') {
         node('master') {
-	    withEnv(["ws=${pwd()}/esgf_ansible"]) {
+	    withEnv(["ws=${pwd()}"]) {
 		def set_env = "export TERM=vt100; export ANSIBLE_NOCOWS=1; export PATH=$conda_path:/sbin:/usr/sbin:$PATH"
-		sh "bash -c '${set_env}; ansible-playbook -i ${hosts_file} -v --skip-tags install --tags start -u root -c paramiko -e @${vars_file} all.yml'"
+		sh "bash -c '${set_env}; ansible-playbook -i ${hosts_file} -v --skip-tags install --tags start -u root -c paramiko -e @${vars_file} ${ws}/esgf_ansible/all.yml'"
 	    }
         }
     }
