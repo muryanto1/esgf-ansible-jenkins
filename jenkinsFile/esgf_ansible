@@ -9,7 +9,7 @@ data_node = "${vm_node}.llnl.gov"
 index_idp_node = "${vm_node}.llnl.gov"
 
 vm_host = "grim.llnl.gov"
-vmx_file = "/var/lib/jenkins/vmware/${vm_node}/${vm_node}.vmx"
+//vmx_file = "/var/lib/jenkins/vmware/${vm_node}/${vm_node}.vmx"
 vm_snapshot = "SnapshotForJenkins"
 vm_jenkins_home = "/home/jenkins"
 vm_python_path = "${vm_jenkins_home}/miniconda2/bin"
@@ -26,10 +26,11 @@ hosts_file = "${workdir}/hosts_file"
 create_hosts_script = "esgf_ansible_jenkins/scripts/create_hosts_file.py"
 prepare_vm = "esgf_ansible_jenkins/scripts/prepare_vm.py"
 
+// for running esgf-test-suite
 run_esgf_test_suite = "esgf_ansible_jenkins/scripts/run_esgf_test_suite.py"
 run_options = "!compute,!dl"
 esgf_test_suite_branch = 'master'
-config_ini = '/home/jenkins/esgf/esgf-dev2_config.ini'
+config_ini = '/home/jenkins/esgf/${vm_node}_config.ini'
 
 try {
     stage('checkout') {
