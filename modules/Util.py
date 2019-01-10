@@ -5,12 +5,6 @@ import shutil
 import time
 
 from Const import *
-from MiscUtil import update_file
-
-def update_esgf_ansible_expect(file_to_update, ssh_pass, admin_pass, workdir):
-
-    update_file(file_to_update, "CHANGEME_SSH_PASSWORD", ssh_pass, workdir)
-    update_file(file_to_update, "CHANGEME_ADMIN_PASSWORD", admin_pass, workdir)
 
 def run_command(cmd, join_stderr=True, shell_cmd=False, verbose=True, cwd=None):
     print("CMD: {c}".format(c=cmd))
