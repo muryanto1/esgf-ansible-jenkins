@@ -25,6 +25,7 @@ hosts_file = "${workdir}/hosts_file"
 
 create_hosts_script = "esgf_ansible_jenkins/scripts/create_hosts_file.py"
 prepare_vm = "esgf_ansible_jenkins/scripts/prepare_vm.py"
+post_install = "esgf_ansible_jenkins/scripts/run_post_install.py"
 
 // for running esgf-test-suite
 run_esgf_test_suite = "esgf_ansible_jenkins/scripts/run_esgf_test_suite.py"
@@ -54,7 +55,7 @@ try {
             }
         }
     }
-    stage('run_playbook') {
+    stage('install') {
         node('master') {
 	    withEnv(["ws=${pwd()}"]) {
 	        // create hosts file
@@ -64,6 +65,15 @@ try {
 	        sh "bash -c '${set_env}; ansible-playbook -i ${hosts_file} -v --tags install -u root -c paramiko -e @${vars_file} ${ws}/esgf_ansible/all.yml'"  
             }
 	}
+    }
+    stage('post_install') {
+        node("${env.vm_node}") {
+            withEnv(["ws=${pwd()}"]) {
+                echo "...post_install..."
+                sh "${vm_python_path}/python ${ws}/${post_install} -H ${vm_jenkins_home}"
+	     	sleep 60
+            }
+        }
     }
     stage('start_services') {
         node('master') {
