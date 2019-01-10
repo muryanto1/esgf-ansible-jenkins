@@ -26,10 +26,12 @@ hosts_file = "${workdir}/hosts_file"
 create_hosts_script = "esgf_ansible_jenkins/scripts/create_hosts_file.py"
 prepare_vm = "esgf_ansible_jenkins/scripts/prepare_vm.py"
 post_install = "esgf_ansible_jenkins/scripts/run_post_install.py"
+run_publisher_test = "esgf_ansible_jenkins/scripts/run_publisher_test.py"
 
 // for running esgf-test-suite
 run_esgf_test_suite = "esgf_ansible_jenkins/scripts/run_esgf_test_suite.py"
 run_options = "!compute,!dl"
+run_options = "myproxy"
 esgf_test_suite_branch = 'master'
 config_ini = '/home/jenkins/esgf/${vm_node}_config.ini'
 
@@ -71,7 +73,6 @@ try {
             withEnv(["ws=${pwd()}"]) {
                 echo "...post_install..."
                 sh "${vm_python_path}/python ${ws}/${post_install} -H ${vm_jenkins_home}"
-	     	sleep 60
             }
         }
     }
@@ -80,19 +81,29 @@ try {
 	    withEnv(["ws=${pwd()}"]) {
 		def set_env = "export TERM=vt100; export ANSIBLE_NOCOWS=1; export PATH=$conda_path:/sbin:/usr/sbin:$PATH"
 		sh "bash -c '${set_env}; ansible-playbook -i ${hosts_file} -v --skip-tags install --tags start -u root -c paramiko -e @${vars_file} ${ws}/esgf_ansible/all.yml'"
+		sleep 60
 	    }
+        }
+    }
+    stage('run_publisher_test') {
+        node("${vm_node}") {
+            withEnv(["ws=${pwd()}"]) {
+                echo "...run_publisher_test..."
+                sh "mkdir esgf_ansible_jenkins"
+		dir("esgf_ansible_jenkins") {
+		    git branch: "master", credentialsId: 'muryanto1', url: "${esgf_ansible_jenkins_url}"
+		}
+                sh "${vm_python_path}/python ${ws}/${run_publisher_test} -w ${vm_jenkins_home} -e esgf-pub "
+            }
         }
     }
     stage('run_tests_on_vm') {
         node("${vm_node}") {
             withEnv(["ws=${pwd()}"]) {
                 echo "...run_tests_on_vm..."
-                sh "mkdir esgf_ansible_jenkins"
-		dir("esgf_ansible_jenkins") {
-		    git branch: "master", credentialsId: 'muryanto1', url: "${esgf_ansible_jenkins_url}"
-		}
 		sh "${vm_python_path}/python ${ws}/${run_esgf_test_suite} -b ${esgf_test_suite_branch} -p ${vm_python_path} -o ${run_options} -w ${vm_jenkins_home} -c ${config_ini}"
-		//sh "${vm_python_path}/python ${ws}/${run_esgf_test_suite} -b ${esgf_test_suite_branch} -p ${vm_python_path} -o ${run_options1} -w ${vm_jenkins_home} -c ${config_ini}"
+		sleep 10
+		sh "${vm_python_path}/python ${ws}/${run_esgf_test_suite} -b ${esgf_test_suite_branch} -p ${vm_python_path} -o ${run_options1} -w ${vm_jenkins_home} -c ${config_ini}"
             }
         }
     }
