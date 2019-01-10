@@ -30,8 +30,8 @@ run_publisher_test = "esgf_ansible_jenkins/scripts/run_publisher_test.py"
 
 // for running esgf-test-suite
 run_esgf_test_suite = "esgf_ansible_jenkins/scripts/run_esgf_test_suite.py"
-run_options = "!compute,!dl"
-run_options = "myproxy"
+run_options = "!compute,!dl,!myproxy"
+run_options1 = "myproxy"
 esgf_test_suite_branch = 'master'
 config_ini = '/home/jenkins/esgf/${vm_node}_config.ini'
 
@@ -64,14 +64,18 @@ try {
 	        def sample_hosts_file = "${ws}/esgf_ansible/sample.hosts"
 	        def set_env = "export TERM=vt100; export ANSIBLE_NOCOWS=1; export PATH=$conda_path:/sbin:/usr/sbin:$PATH"
                 sh "${python} ${ws}/${create_hosts_script} -d ${data_node} -i ${index_idp_node} -s ${sample_hosts_file} -o ${hosts_file}"
-	        sh "bash -c '${set_env}; ansible-playbook -i ${hosts_file} -v --tags install -u root -c paramiko -e @${vars_file} ${ws}/esgf_ansible/all.yml'"  
+	        sh "bash -c '${set_env}; ansible-playbook -i ${hosts_file} -v -u root -c paramiko -e @${vars_file} ${ws}/esgf_ansible/install.yml'"  
             }
 	}
     }
     stage('post_install') {
-        node("${env.vm_node}") {
+        node("${vm_node}") {
             withEnv(["ws=${pwd()}"]) {
                 echo "...post_install..."
+                sh "mkdir esgf_ansible_jenkins"
+		dir("esgf_ansible_jenkins") {
+		    git branch: "master", credentialsId: 'muryanto1', url: "${esgf_ansible_jenkins_url}"
+		}
                 sh "${vm_python_path}/python ${ws}/${post_install} -H ${vm_jenkins_home}"
             }
         }
@@ -80,7 +84,7 @@ try {
         node('master') {
 	    withEnv(["ws=${pwd()}"]) {
 		def set_env = "export TERM=vt100; export ANSIBLE_NOCOWS=1; export PATH=$conda_path:/sbin:/usr/sbin:$PATH"
-		sh "bash -c '${set_env}; ansible-playbook -i ${hosts_file} -v --skip-tags install --tags start -u root -c paramiko -e @${vars_file} ${ws}/esgf_ansible/all.yml'"
+		sh "bash -c '${set_env}; ansible-playbook -i ${hosts_file} -v --tags start -u root -c paramiko -e @${vars_file} ${ws}/esgf_ansible/control.yml'"
 		sleep 60
 	    }
         }
@@ -89,10 +93,6 @@ try {
         node("${vm_node}") {
             withEnv(["ws=${pwd()}"]) {
                 echo "...run_publisher_test..."
-                sh "mkdir esgf_ansible_jenkins"
-		dir("esgf_ansible_jenkins") {
-		    git branch: "master", credentialsId: 'muryanto1', url: "${esgf_ansible_jenkins_url}"
-		}
                 sh "${vm_python_path}/python ${ws}/${run_publisher_test} -w ${vm_jenkins_home} -e esgf-pub "
             }
         }
