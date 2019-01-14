@@ -26,7 +26,7 @@ vm_node = args.vm_node
 
 # check if vm is running (note that there may be a vm with different vmx file
 # for this vm that is running.
-vmx_filename = check_if_vm_is_running(vm_host, vm)
+vmx_filename = check_if_vm_is_running(vm_host, vm_node)
 
 # stop vm if running
 if vmx_filename is not None:
