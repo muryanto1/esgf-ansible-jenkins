@@ -24,10 +24,15 @@ vmx = args.vmx
 vm_snapshot = args.snapshot
 vm_node = args.vm_node
 
+# check if vm is running (note that there may be a vm with different vmx file
+# for this vm that is running.
+vmx_filename = check_if_vm_is_running(vm_host, vm)
+
 # stop vm if running
-ret_code = stop_vm_if_running(vm_host, vmx)
-if ret_code != SUCCESS:
-    sys.exit(ret_code)
+if vmx_filename is not None:
+    ret_code = stop_vm(vm_host, vmx_filename)
+    if ret_code != SUCCESS:
+        sys.exit(ret_code)
 
 # revert vm to snapshot and start it
 ret_code = revert_vm_to_snapshot(vm_host, vmx, vm_snapshot)

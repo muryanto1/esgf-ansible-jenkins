@@ -18,25 +18,32 @@ def check_num_of_vm_running(vm_host):
 
     return(ret_code, n_running_vm)
 
+def check_if_vm_is_running(vm_host, vm):
 
-def stop_vm_if_running(vm_host, vmx):
+    # check if vm is running
+    cmd = "ssh -t jenkins@{h} \"vmrun list\"".format(h=vm_host)
+    ret_code, output = run_cmd_capture_output(cmd, True, False, True)
 
-    ret_code, n_running_vm = check_num_of_vm_running(vm_host)
+    vmx_filename = None
+    for a_line in output:
+        m = re.match(r'Total\s+running\s+VMs:\s+(\d+)', a_line)
+        if m:
+            n_running_vm = m.group(1)
+            if n_running_vm == 0:
+                break
+        if vm in a_line:
+            print("FOUND the vm file: {s}".format(s=a_line))
+            vmx_filename = a_line.rstrip()
+
+    return vmx_filename
+
+def stop_vm(vm_host, vmx):
+
+    cmd = "ssh -t jenkins@{h} \"vmrun stop {vmx}\"".format(h=vm_host,
+                                                           vmx=vmx)
+    ret_code = run_cmd(cmd, True, False, True)
     if ret_code != SUCCESS:
-        return ret_code
-
-    if n_running_vm == '1':
-        print("vm is running... shutting it down")
-        cmd = "ssh -t jenkins@{h} \"vmrun stop {vmx}\"".format(h=vm_host,
-                                                            vmx=vmx)
-        ret_code = run_cmd(cmd, True, False, True)
-        if ret_code != SUCCESS:
-            print("FAIL...{cmd}".format(cmd=cmd))
-            return ret_code
-
-        ret_code, n_running_vm = check_num_of_vm_running(vm_host)                
-        print("number of running vm now: " + n_running_vm)
-
+        print("FAIL...{cmd}".format(cmd=cmd))
     return ret_code
 
 def revert_vm_to_snapshot(vm_host, vmx, vm_snapshot):
@@ -50,17 +57,12 @@ def revert_vm_to_snapshot(vm_host, vmx, vm_snapshot):
 
     return ret_code
     
-
 def start_vm(vm_host, vmx):
     cmd = "ssh -t jenkins@{h} \"vmrun start {vmx} nogui\"".format(h=vm_host,
                                                                vmx=vmx)
     ret_code = run_cmd(cmd, True, False, True)
     if ret_code != SUCCESS:
         print("FAIL...{cmd}".format(cmd=cmd))
-        return ret_code
-
-    ret_code, n_running_vm = check_num_of_vm_running(vm_host)                
-    print("number of running vm now: " + n_running_vm)
     return(ret_code)
 
 def get_vm_ready(vm_node):
@@ -84,5 +86,6 @@ def do_yum_update(vm_node):
     run_cmd(cmd, True, False, True)
 
     return ret_code
+
 
 

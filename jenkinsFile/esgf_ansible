@@ -21,7 +21,7 @@ conf_dir = "/var/lib/jenkins/esgf"
 
 workdir = "/var/lib/jenkins/work/esgf-ansible-jenkins"
 vars_file = "/var/lib/jenkins/esgf/ansible/configs/${vm_node}.vars"
-hosts_file = "${workdir}/hosts_file"
+hosts_file = "${workdir}/${vm_node}.hosts_file"
 
 create_hosts_script = "esgf_ansible_jenkins/scripts/create_hosts_file.py"
 prepare_vm = "esgf_ansible_jenkins/scripts/prepare_vm.py"
