@@ -64,7 +64,7 @@ try {
 	        // create hosts file
 	        def sample_hosts_file = "${ws}/esgf_ansible/sample.hosts"
 	        def set_env = "export TERM=vt100; export ANSIBLE_NOCOWS=1; export ANSIBLE_HOST_KEY_CHECKING=False; export PATH=$conda_path:/sbin:/usr/sbin:$PATH"
-                sh "${python} ${ws}/${create_hosts_script} -d ${data_node} -i ${index_idp_node} -s ${sample_hosts_file} -o ${hosts_file}"
+                sh "${python} ${ws}/${create_hosts_script} -d ${data_node} -i ${index_idp_node} -o ${hosts_file}"
 	        sh "bash -c '${set_env}; ansible-playbook -i ${hosts_file} -v -u root -c paramiko -e @${vars_file} ${ws}/esgf_ansible/install.yml'"  
             }
 	}
