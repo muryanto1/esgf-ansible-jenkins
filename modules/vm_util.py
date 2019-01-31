@@ -76,13 +76,14 @@ def get_vm_ready(vm_node):
 
     return ret_code
 
-def do_yum_update(vm_node):
-    cmd = "ssh -o StrictHostKeyChecking=no -t jenkins@{n} \"sudo yum clean all\"".format(n=vm_node)
-    ret_code = run_cmd(cmd, True, False, True)
-    if ret_code != SUCCESS:
-        print("FAIL...{cmd}".format(cmd=cmd))
+def do_yum_update(vm_node, module):
+    #cmd = "ssh -o StrictHostKeyChecking=no -t jenkins@{n} \"sudo yum clean all\"".format(n=vm_node)
+    #ret_code = run_cmd(cmd, True, False, True)
+    #if ret_code != SUCCESS:
+    #    print("FAIL...{cmd}".format(cmd=cmd))
 
-    cmd = "ssh -o StrictHostKeyChecking=no -t jenkins@{n} \"sudo yum update -y\"".format(n=vm_node)
+    cmd = "ssh -o StrictHostKeyChecking=no -t jenkins@{n} \"sudo yum update -y {m}\"".format(n=vm_node,
+                                                                                             m=module)
     run_cmd(cmd, True, False, True)
 
     return ret_code

@@ -8,6 +8,7 @@ sys.path.append(modules_dir)
 
 from Util import *
 from MiscUtil import *
+from vm_util import *
 
 parser = argparse.ArgumentParser(description="run esgf 2.x post install steps",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -36,4 +37,5 @@ if status != 0:
     print("FAIL...update_cog_settings_conf ... for setting USE_CAPTCHA=False")
     sys.exit(status)
 
-status = do_yum_update(vm_node, 'libarchive-devel')
+sys.exit(status)
+#status = do_yum_update(vm_node, 'libarchive-devel')
