@@ -87,5 +87,13 @@ def do_yum_update(vm_node):
 
     return ret_code
 
+def do_yum_install(vm_node, package):
+    cmd = "ssh -o StrictHostKeyChecking=no -t jenkins@{n} \"sudo yum -y install {p}\"".format(n=vm_node,
+                                                                                              p=package)
+    run_cmd(cmd, True, False, True)
+
+    return ret_code
+
+
 
 

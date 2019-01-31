@@ -32,5 +32,8 @@ file_to_update = '/usr/local/cog/cog_config/cog_settings.cfg'
 var_val_pairs_list = ['USE_CAPTCHA=False']
 status = update_cog_settings_conf(var_val_pairs_list, '=', workdir)
 
-sys.exit(status)
+if status != 0:
+    print("FAIL...update_cog_settings_conf ... for setting USE_CAPTCHA=False")
+    sys.exit(status)
 
+status = do_yum_update(vm_node, 'libarchive-devel')
