@@ -10,7 +10,7 @@ index_idp_node = "${vm_node}.llnl.gov"
 
 vm_host = "grim.llnl.gov"
 //vmx_file = "/var/lib/jenkins/vmware/${vm_node}/${vm_node}.vmx"
-vm_snapshot = "SnapshotForJenkins"
+//vm_snapshot = "SnapshotForJenkins"
 vm_jenkins_home = "/home/jenkins"
 vm_python_path = "${vm_jenkins_home}/miniconda2/bin"
 
